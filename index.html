@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>繁体姓氏终极填充挑战</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;font-family:"Microsoft YaHei","Noto Sans SC",sans-serif;
+ background:linear-gradient(135deg,#eaf7ff,#fff2dd,#f3ecff);color:#26343d
+}
+.wrap{max-width:820px;margin:auto;padding:24px 16px 40px}
+header,.panel{background:#fffffff0;border-radius:28px;box-shadow:0 10px 30px rgba(60,70,80,.14)}
+header{text-align:center;padding:25px 18px;margin-bottom:18px}
+h1{margin:0;color:#315e91;font-size:32px}
+.sub{margin-top:9px;color:#74818b}
+.badge{display:inline-block;margin-top:13px;padding:7px 15px;border-radius:20px;background:#fff0ce;color:#a5681c;font-weight:bold}
+.stats{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:17px}
+.stat{background:#f3f7fa;padding:8px 15px;border-radius:14px;font-weight:bold}
+.stat b{color:#e47846;font-size:20px}
+.panel{padding:30px;text-align:center}
+.progress{color:#75828c;font-weight:bold}
+.question{font-size:21px;font-weight:bold;margin:18px 0 24px}
+.traditional{
+ display:block;font-size:76px;line-height:1.15;color:#2f6095;
+ margin:15px 0
+}
+.hint{font-size:14px;color:#87929a;font-weight:normal}
+.answer-area{display:flex;justify-content:center;gap:10px;margin:28px 0}
+.answer-input{
+ width:88px;height:70px;border:3px solid #bdcedb;border-radius:16px;
+ background:white;text-align:center;font-size:38px;font-weight:bold;
+ color:#315e91;outline:none
+}
+.answer-input:focus{border-color:#4d82b8;box-shadow:0 0 0 4px #4d82b822}
+.answer-input.correct{border-color:#58b980;background:#e8faef;color:#24764a}
+.answer-input.wrong{border-color:#df806d;background:#fff0ed;color:#b54737}
+.answer-input:disabled{background:#f7f9fa}
+.submit,.next,.restart{
+ border:0;border-radius:14px;padding:12px 26px;font-size:17px;
+ font-weight:bold;background:#4d81b8;color:white;cursor:pointer
+}
+.next{display:none}
+.feedback{min-height:32px;margin:18px 0;font-size:18px;font-weight:bold}
+.result{display:none}
+.result h2{font-size:32px;color:#315e91}
+.big{font-size:58px;font-weight:900;color:#e47746}
+.review{
+ max-width:650px;margin:20px auto;padding:15px;background:#f6f8fa;
+ border-radius:16px;text-align:left;line-height:1.9
+}
+@media(max-width:600px){
+ h1{font-size:25px}.panel{padding:20px}
+ .traditional{font-size:58px}
+ .answer-input{width:65px;height:58px;font-size:30px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+<h1>🏮 繁体姓氏 · 终极填充挑战</h1>
+<div class="sub">看繁体姓氏，自己写出正确的简体字</div>
+<div class="badge">🔥 10题 · 每题10分 · 满分100</div>
+<div class="stats">
+<div class="stat">题目 <b id="num">1</b>/10</div>
+<div class="stat">得分 <b id="score">0</b></div>
+<div class="stat">答对 <b id="correct">0</b></div>
+</div>
+</header>
+
+<div class="panel" id="game">
+<div class="progress">第 <span id="progress">1</span> 题</div>
+
+<div class="question">
+请把下面的繁体姓氏写成简体字：
+<span class="traditional" id="traditional"></span>
+<div class="hint">✍️ 不提供任何选项，请凭记忆填写。</div>
+</div>
+
+<div class="answer-area" id="answerArea"></div>
+
+<button class="submit" id="submit" onclick="checkAnswer()">✔ 提交答案</button>
+<button class="next" id="next" onclick="nextQuestion()">下一题 ➜</button>
+
+<div class="feedback" id="feedback"></div>
+</div>
+
+<div class="panel result" id="result">
+<h2>🎉 挑战完成！</h2>
+<p>你的最终成绩</p>
+<div class="big"><span id="finalScore">0</span> / 100</div>
+<p id="finalText"></p>
+<div class="review" id="review"></div>
+<button class="restart" onclick="restart()">🔄 再挑战一次</button>
+</div>
+
+</div>
+
+<script>
+/*
+  10个单姓。
+  特别选择繁简字形差异明显的姓氏，并避开本班36位学生已出现的姓氏。
+*/
+const data=[
+ ["龔","龚"],
+ ["竇","窦"],
+ ["聶","聂"],
+ ["欒","栾"],
+ ["鄺","邝"],
+ ["饒","饶"],
+ ["嚴","严"],
+ ["譚","谭"],
+ ["蔣","蒋"],
+ ["蘇","苏"]
+];
+
+let questions=[],index=0,score=0,correct=0,wrongList=[],answered=false;
+
+function shuffle(a){
+ for(let i=a.length-1;i>0;i--){
+  const j=Math.floor(Math.random()*(i+1));
+  [a[i],a[j]]=[a[j],a[i]];
+ }
+ return a;
+}
+
+function makeQuestions(){
+ questions=shuffle([...data]);
+}
+
+function load(){
+ answered=false;
+ document.getElementById("num").textContent=index+1;
+ document.getElementById("progress").textContent=index+1;
+ document.getElementById("traditional").textContent=questions[index][0];
+ document.getElementById("feedback").textContent="";
+ document.getElementById("submit").style.display="inline-block";
+ document.getElementById("next").style.display="none";
+
+ const area=document.getElementById("answerArea");
+ area.innerHTML="";
+ const answer=questions[index][1];
+
+ for(let i=0;i<answer.length;i++){
+  const input=document.createElement("input");
+  input.className="answer-input";
+  input.maxLength=1;
+  input.autocomplete="off";
+  input.dataset.index=i;
+
+  input.oninput=()=>{
+   if(input.value.length===1){
+    const next=input.nextElementSibling;
+    if(next)next.focus();
+   }
+  };
+
+  input.onkeydown=(e)=>{
+   if(e.key==="Backspace" && input.value===""){
+    const prev=input.previousElementSibling;
+    if(prev){prev.focus();prev.value="";}
+   }
+   if(e.key==="Enter")checkAnswer();
+  };
+
+  area.appendChild(input);
+ }
+ area.firstChild.focus();
+}
+
+function checkAnswer(){
+ if(answered)return;
+
+ const correctAnswer=questions[index][1];
+ const inputs=[...document.querySelectorAll(".answer-input")];
+ const userAnswer=inputs.map(x=>x.value.trim()).join("");
+
+ if(!userAnswer){
+  document.getElementById("feedback").textContent="✏️ 请先填写答案！";
+  document.getElementById("feedback").style.color="#a66b20";
+  return;
+ }
+
+ answered=true;
+ document.getElementById("submit").style.display="none";
+ inputs.forEach(x=>x.disabled=true);
+
+ if(userAnswer===correctAnswer){
+  inputs.forEach(x=>x.classList.add("correct"));
+  score+=10;
+  correct++;
+  document.getElementById("feedback").textContent="✅ 完全正确！+10分";
+  document.getElementById("feedback").style.color="#267b49";
+ }else{
+  inputs.forEach((x,i)=>{
+   if(x.value===correctAnswer[i])x.classList.add("correct");
+   else x.classList.add("wrong");
+  });
+  wrongList.push(`「${questions[index][0]}」→「${correctAnswer}」　你的答案：${userAnswer}`);
+  document.getElementById("feedback").textContent=
+   `❌ 答错了！正确答案是「${correctAnswer}」`;
+  document.getElementById("feedback").style.color="#b54737";
+ }
+
+ document.getElementById("score").textContent=score;
+ document.getElementById("correct").textContent=correct;
+ document.getElementById("next").style.display="inline-block";
+}
+
+function nextQuestion(){
+ index++;
+ if(index>=10){finish();return;}
+ load();
+}
+
+function finish(){
+ document.getElementById("game").style.display="none";
+ document.getElementById("result").style.display="block";
+ document.getElementById("finalScore").textContent=score;
+
+ let text=
+ score===100?"🏆 满分！你已经是繁体姓氏大师！":
+ score>=90?"🌟 太厉害了！只差一步满分！":
+ score>=80?"👏 非常棒！繁简字掌握得很好！":
+ score>=60?"👍 不错，再加强字形记忆！":
+ "💪 再挑战一次，你会发现自己进步很多！";
+
+ document.getElementById("finalText").textContent=
+  `${text}　你答对了 ${correct}/10 题。`;
+
+ document.getElementById("review").innerHTML=wrongList.length
+ ? "<b>📚 错题复习：</b><br>"+wrongList.join("<br>")
+ : "<b>🎯 完美表现！</b><br>10题全部答对！";
+}
+
+function restart(){
+ index=0;score=0;correct=0;wrongList=[];
+ document.getElementById("score").textContent=0;
+ document.getElementById("correct").textContent=0;
+ document.getElementById("game").style.display="block";
+ document.getElementById("result").style.display="none";
+ makeQuestions();
+ load();
+}
+
+restart();
+</script>
+</body>
+</html>
